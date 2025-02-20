@@ -1,0 +1,36 @@
+#include <string>
+#include <vector>
+
+using namespace std;
+
+int solution(vector<vector<int>> board, int k) {
+    int answer = 0;
+    
+    const int iRowSize = board.size();
+    // 조건 체크
+    if ((0 < iRowSize) && (100 >= iRowSize))
+    {
+        // 동일한 길이이므로 하나만 확인
+        const int iColCount = board[0].size();
+        
+        // Board 검색
+        for(int iRow = 0; iRow < iRowSize; ++iRow)
+        {
+            // Row가 입력값보다 크면 루프종료
+            if (k < iRow) break;
+            
+            const vector<int>& vColBoard = board[iRow];
+            
+            for(int iCol = 0; iCol < iColCount; ++iCol)
+            {
+                // Row + Col이 입력값보다 크면 루프종료
+                if (k < (iRow + iCol)) break;
+                
+                // 결과 합
+                answer += vColBoard[iCol];
+            }
+        }
+    }
+    
+    return answer;
+}

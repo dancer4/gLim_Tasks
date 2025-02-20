@@ -1,0 +1,35 @@
+#include <string>
+#include <vector>
+#include <float.h>
+
+using namespace std;
+
+float GetSlope(vector<int>& vP0, vector<int>& vP1)
+{
+	float fRet = FLT_MAX;
+
+	// 두 점사이의 간격
+	int iDeltaX = vP1[0] - vP0[0];
+	int iDeltaY = vP1[1] - vP0[1];
+
+	// Line Slope
+	if (0 != iDeltaX) fRet = (float)iDeltaY / iDeltaX;
+
+	return fRet;
+}
+
+int solution(vector<vector<int>> dots) {
+    int answer = 0;
+    
+    // 조건체크
+	if (dots.size() <= 4)
+	{
+		// Line Slope 비교
+		if ((GetSlope(dots[0], dots[1]) == GetSlope(dots[2], dots[3])) ||
+			(GetSlope(dots[0], dots[2]) == GetSlope(dots[1], dots[3])) ||
+			(GetSlope(dots[0], dots[3]) == GetSlope(dots[1], dots[2])))
+			answer = 1;
+	}
+    
+    return answer;
+}

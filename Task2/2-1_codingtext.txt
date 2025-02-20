@@ -1,0 +1,20 @@
+#include <string>
+#include <vector>
+
+using namespace std;
+
+int solution(int n, int k) {
+    int answer = 0;
+    
+    // 조건 체크
+    if ((0 < n) && (1000 > n))
+    {
+        // 서비스 음료
+        int iService = n / 10;
+        
+        // 지불 금액
+        answer = 12000 * n + 2000 * (k - iService);
+    }
+
+    return answer;
+}
