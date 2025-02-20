@@ -70,15 +70,19 @@ void Point3Circle::Draw(CImage& ImgBoard)
 		int iOffsetX = m_iRadius * cosf(fRad);
 		int iOffsetY = m_iRadius * sinf(fRad);
 
-		AssignMemory(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);
-		AssignMemory(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);
-		AssignMemory(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);
-		AssignMemory(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);
+		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);
+		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);
+		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);
+		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);
+		//DrawPoint(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);	// 0 ~ 90
+		//DrawPoint(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);	// 270 ~ 360
+		//DrawPoint(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);	// 90 ~ 180
+		//DrawPoint(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);	// 180 ~ 270
 	}
 }
 //--------------------------------------------------------------------------------------------
-// Assign Memory
-void Point3Circle::AssignMemory(CImage& ImgBoard, int iX, int iY)
+// Draw Circle
+void Point3Circle::DrawCircle(CImage& ImgBoard, int iX, int iY)
 {
 	if (ImgBoard.IsNull()) return;
 
@@ -91,7 +95,7 @@ void Point3Circle::AssignMemory(CImage& ImgBoard, int iX, int iY)
 	// 원 두께만큼 Assign
 	int iHalfWidth = m_iWidth * 0.5f;
 	CPoint ptPos(iX - iHalfWidth, iY - iHalfWidth);
-	for (int iH = 0; iH < m_iWidth; ++iH, ++iY)
+	for (int iH = 0; iH < m_iWidth; ++iH, ++ptPos.y)
 	{
 		// 영역 체크
 		if (ptBoard.y <= ptPos.y) break;
@@ -104,10 +108,63 @@ void Point3Circle::AssignMemory(CImage& ImgBoard, int iX, int iY)
 				if (ptBoard.x <= iPos) break;
 				else if (0 <= iPos)
 				{
-					pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;
+					//pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;	// Black
+					DrawPoint(ImgBoard, iX, iY, m_iWidth);
 				}
 			}
 		}
 	}
 }
+//--------------------------------------------------------------------------------------------
+// Draw Point for Circle
+void Point3Circle::DrawPoint(CImage& ImgBoard, int iX, int iY, int iWidth)
+{
+	if (ImgBoard.IsNull()) return;
+
+	// ImageBoard
+	const CPoint ptBoard(ImgBoard.GetWidth(), ImgBoard.GetHeight());
+
+	byte* pbImgBoard = (byte*)ImgBoard.GetBits();
+	int iPitchBoard = ImgBoard.GetPitch();
+
+	// 원 두께만큼 Assign
+	int iHalfWidth = iWidth * 0.5f;
+	CPoint ptPos(iX - iHalfWidth, iY - iHalfWidth);
+	for (int iH = 0; iH < iWidth; ++iH, ++ptPos.y)
+	{
+		// 영역 체크
+		if (ptBoard.y <= ptPos.y) break;
+		else if (0 <= ptPos.y)
+		{
+			int iPos = ptPos.x;
+			for (int iW = 0; iW < iWidth; ++iW, ++iPos)
+			{
+				// 영역 체크
+				if (ptBoard.x <= iPos) break;
+				else if (0 <= iPos)
+				{
+					//if (IsInPoint(iX, iY, iPos, ptPos.y, iHalfWidth))
+					{
+						pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;	// Black
+					}
+				}
+			}
+		}
+	}
+}
+//--------------------------------------------------------------------------------------------
+//// Check in Point
+//bool Point3Circle::IsInPoint(int iPtPosX, int iPtPosY, int iX, int iY, int iRadius)
+//{
+//	bool bRet = false;
+//
+//	// 반지름과 길이의 제곱값
+//	float fSquareRadius = pow((float)iRadius, 2);
+//	float fSquareLength = pow((float)(iPtPosX - iX), 2) + pow((float)(iPtPosY - iY), 2);
+//	
+//	// 제곱값 비교(반지름, 길이)
+//	if (fSquareRadius >= fSquareLength) bRet = true;
+//
+//	return bRet;
+//}
 //--------------------------------------------------------------------------------------------

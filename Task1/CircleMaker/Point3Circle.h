@@ -20,7 +20,13 @@ public:
 	void	Draw(CImage& ImgBoard);
 
 private:
-	void	AssignMemory(CImage& ImgBoard, int iX, int iY);
+	// Draw Circle
+	void	DrawCircle(CImage& ImgBoard, int iX, int iY);
+	// Draw Point for Circle
+	void	DrawPoint(CImage& ImgBoard, int iX, int iY, int iWidth);
+
+	// Check in Point
+	bool	IsInPoint(int iPtPosX, int iPtPosY, int iX, int iY, int iWidth);
 
 private:
 	CPoint		m_ptCenter;		// ¡ﬂΩ…¡°

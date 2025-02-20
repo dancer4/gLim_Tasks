@@ -6,11 +6,54 @@
 #include "CircleMaker.h"
 #include "CircleMakerDlg.h"
 #include "afxdialogex.h"
+#include <thread>
+#include <chrono>
+#include <random>
+//#include <time.h>
+
+using namespace std::chrono;
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
+
+//---------------------------------------------------------------------------------------------
+// Processing Thread
+void ProcessThread(CWnd* pWnd)
+{
+	if (NULL == pWnd) return;
+
+	CCircleMakerDlg* pDlg = (CCircleMakerDlg*)pWnd;
+
+	int iDrawCount = 10;	// 10번
+	long iInterval = 500;	// 초당 2회(500 ms)
+
+	auto tStartTime = system_clock::now();
+	
+	while (0 < iDrawCount)
+	{
+		// Calcu Time
+		auto tCurTime = system_clock::now();
+		long tDeltaTime = duration_cast<milliseconds>(tCurTime - tStartTime).count();
+
+		if (iInterval < tDeltaTime)
+		{
+			// Draw Random
+			pDlg->DrawRandom();
+			pDlg->PostMessageW(UM_UPDATEDATA);
+
+			--iDrawCount;
+
+			tStartTime = tCurTime;		
+		}
+
+		Sleep(1);
+	}
+
+	int i = 0;
+}
+//---------------------------------------------------------------------------------------------
 
 // CAboutDlg dialog used for App About
 
@@ -51,7 +94,7 @@ CCircleMakerDlg::CCircleMakerDlg(CWnd* pParent /*=NULL*/)
 	: CDialogEx(CCircleMakerDlg::IDD, pParent)
 	, m_strLDown(_T(""))
 	, m_strSelPointIdx(_T(""))
-	, m_iCircleWidth(1)
+	, m_iPointWidth(DEFAULT_POINT_WIDTH)
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 
@@ -68,8 +111,7 @@ void CCircleMakerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_STC_POS01, m_strPos[1]);
 	DDX_Text(pDX, IDC_STC_POS02, m_strPos[2]);
 	DDX_Text(pDX, IDC_STC_SELPOINT_IDX, m_strSelPointIdx);
-	DDX_Text(pDX, IDC_EDIT_CIRCLE_W, m_iCircleWidth);
-	DDV_MinMaxInt(pDX, m_iCircleWidth, 1, 5);
+	DDX_Text(pDX, IDC_EDT_POINT_W, m_iPointWidth);
 }
 
 BEGIN_MESSAGE_MAP(CCircleMakerDlg, CDialogEx)
@@ -81,6 +123,8 @@ BEGIN_MESSAGE_MAP(CCircleMakerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BTN_IMG_BOARD, &CCircleMakerDlg::OnBnClickedBtnImgBoard)
 	ON_WM_MOUSEMOVE()
 	ON_WM_LBUTTONUP()
+	ON_BN_CLICKED(IDC_BTN_RAND_3POINT, &CCircleMakerDlg::OnBnClickedBtnRand3point)
+	ON_MESSAGE(UM_UPDATEDATA, OnUpdateDataFromMessage)
 END_MESSAGE_MAP()
 
 
@@ -117,7 +161,7 @@ BOOL CCircleMakerDlg::OnInitDialog()
 
 	// Reset
 	Reset();
-
+	
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
 
@@ -159,8 +203,8 @@ void CCircleMakerDlg::OnPaint()
 	}
 	else
 	{
-		// Draw ImageBoard
-		DrawImgBoard();
+		// Draw All(Image Board, Image Point, 3Point Circle)
+		DrawAll();
 
 		CDialogEx::OnPaint();
 	}
@@ -179,24 +223,22 @@ void CCircleMakerDlg::Reset()
 	// ImageBoard 생성 - W: 800, H: 600
 	CreateImgBoard(800, 600);
 
-	// Image Points
-	for (int i = 0, n = m_vImgPoints.size(); i < n; ++i)
+	// Drawing Points
+	for (int i = 0, n = m_vDrawingPoints.size(); i < n; ++i)
 	{
-		ImagePoint* pImgPoint = m_vImgPoints[i];
-		if (NULL == pImgPoint) continue;
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
+		if (NULL == pDrawingPoint) continue;
 
-		// Release
-		pImgPoint->Release();
-		delete pImgPoint;
+		delete pDrawingPoint;
 	}
-	m_vImgPoints.clear();
+	m_vDrawingPoints.clear();
 	
 	m_Pt3Circle.Reset();			// Reset 3 Point Circle
 
 	m_iPointIdx = -1;				// Point Index
 	m_bLDown = false;				// Mouse LDown flag
 	m_ptPerMousePos.SetPoint(0, 0);	// Mouse Per Position
-	
+		
 	// Clear Text
 	m_strLDown = "LDown:";
 	for (int i = 0; i < MAX_POINT_COUNT; ++i)
@@ -310,13 +352,13 @@ void CCircleMakerDlg::DrawAll()
 	// Clear ImageBoard
 	ClearImgBoard(255);
 
-	// Draw Image Points
-	for (int i = 0, n = m_vImgPoints.size(); i < n; ++i)
+	// Draw Drawing Points
+	for (int i = 0, n = m_vDrawingPoints.size(); i < n; ++i)
 	{
-		ImagePoint* pImgPoint = m_vImgPoints[i];
-		if (NULL == pImgPoint) continue;
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
+		if (NULL == pDrawingPoint) continue;
 
-		pImgPoint->Draw(m_ImgBoard);
+		pDrawingPoint->Draw(m_ImgBoard);
 	}
 
 	// Draw 3 Points Circle
@@ -326,17 +368,61 @@ void CCircleMakerDlg::DrawAll()
 	DrawImgBoard();
 }
 //---------------------------------------------------------------------------------------------
+// 주어진 3 Point Random 재배치 및 Circle 재생성 그리기
+void CCircleMakerDlg::DrawRandom()
+{
+	// Check Point Count
+	if (MAX_POINT_COUNT > m_vDrawingPoints.size()) return;
+
+	const int iWidth = m_ImgBoard.GetWidth();
+	const int iHeight = m_ImgBoard.GetHeight();
+
+	// Random
+	random_device rdRand;								// Random Divece
+	default_random_engine reGen(rdRand());				// Random Engine
+	uniform_int_distribution<int> udDistW(0, iWidth);	// Random Distribution Width
+	uniform_int_distribution<int> udDistH(0, iHeight);	// Random Distribution Height
+
+	for (int i = 0; i < MAX_POINT_COUNT; ++i)
+	{
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
+		if (NULL == pDrawingPoint) continue;
+		
+		// Board 내에서 값 생성
+		//int iX = rand() % iWidth;
+		//int iY = rand() % iHeight;
+		int iX = udDistW(reGen);
+		int iY = udDistH(reGen);
+		pDrawingPoint->SetPos(iX, iY);
+
+		// DrawingPoint Pos
+		CPoint ptPoint = pDrawingPoint->GetPos();
+		m_strPos[i].Format(_T("Pos%02d: %d %d"), i, ptPoint.x, ptPoint.y);
+		//m_strPos[i].Format(_T("Pos%02d: %d %d"), i, iX, iY);
+	}
+
+	// Make Circle
+	Make3PointCircle();
+
+	// Draw All(Image Board, Image Point, 3Point Circle)
+	DrawAll();
+
+	// Thread에서 호출오류 발생: 사용자 메시지 호출로 처리
+	//UpdateData(FALSE);
+}
+//---------------------------------------------------------------------------------------------
 // Is Select Point
 bool CCircleMakerDlg::IsSelectPoint(int iX, int iY)
 {
 	bool bRet = false;
-	int iPointSize = m_vImgPoints.size();	// Point 갯수
+
+	int iPointSize = m_vDrawingPoints.size();	// Point 갯수
 
 	// 생성된 Point에 대한 InBound 체크
 	for (int i = 0; i < iPointSize; ++i)
 	{
-		ImagePoint* pImgPoint = m_vImgPoints[i];
-		if ((NULL != pImgPoint) && pImgPoint->IsInBound(iX, iY))
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
+		if ((NULL != pDrawingPoint) && pDrawingPoint->IsInBound(iX, iY))
 		{
 			m_iPointIdx = i;
 			bRet = true;
@@ -352,15 +438,17 @@ bool CCircleMakerDlg::AddPoint(int iX, int iY)
 {
 	bool bRet = false;
 
-	int iPointCount = m_vImgPoints.size();
+	int iPointCount = m_vDrawingPoints.size();
 	if (MAX_POINT_COUNT > iPointCount)
 	{
+		UpdateData(TRUE);
+
 		// Add Point
-		ImagePoint* pImgPoint = new ImagePoint(iX, iY);
-		m_vImgPoints.push_back(pImgPoint);
+		DrawingPoint* pDrawingPoint = new DrawingPoint(iX, iY, m_iPointWidth);
+		m_vDrawingPoints.push_back(pDrawingPoint);
 
 		// Draw in ImageBoard
-		pImgPoint->Draw(m_ImgBoard, iX, iY);
+		pDrawingPoint->Draw(m_ImgBoard, iX, iY, m_iPointWidth);
 
 		// ImagePoint Pos
 		m_strPos[iPointCount].Format(_T("Pos%02d: %d %d"), iPointCount, iX, iY);
@@ -368,7 +456,7 @@ bool CCircleMakerDlg::AddPoint(int iX, int iY)
 		bRet = true;
 	}
 
-	if (bRet && (MAX_POINT_COUNT == m_vImgPoints.size()))
+	if (bRet && (MAX_POINT_COUNT == m_vDrawingPoints.size()))
 	{
 		// Make 3 Point Circle
 		Make3PointCircle();
@@ -384,15 +472,15 @@ bool CCircleMakerDlg::AddPoint(int iX, int iY)
 void CCircleMakerDlg::Make3PointCircle()
 {
 	// Check Image Point Count
-	if (MAX_POINT_COUNT > m_vImgPoints.size()) return;
+	if (MAX_POINT_COUNT > m_vDrawingPoints.size()) return;
 
 	CPoint ptPoints[MAX_POINT_COUNT];
 	for (int i = 0; i < MAX_POINT_COUNT; ++i)
 	{
-		ImagePoint* pImgPoint = m_vImgPoints[i];
-		if (NULL == pImgPoint) continue;
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
+		if (NULL == pDrawingPoint) continue;
 
-		ptPoints[i] = pImgPoint->GetPos();
+		ptPoints[i] = pDrawingPoint->GetPos();
 	}
 
 	// Make 3 Point Circle
@@ -422,32 +510,20 @@ void CCircleMakerDlg::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	m_bLDown = true;		// Mouse LDown flag
 
-	// LDown Pos
-	m_strLDown.Format(_T("LDown: %d %d"), point.x, point.y);
-	
 	m_iPointIdx = -1;
 	if (!IsSelectPoint(point.x, point.y))
 	{
 		AddPoint(point.x, point.y);
 	}
+		
+	// Draw ImageBoard
+	DrawImgBoard();
+
+	// Display LDown Pos
+	m_strLDown.Format(_T("LDown: %d %d"), point.x, point.y);
 
 	// Display Select Point Index
 	m_strSelPointIdx.Format(_T("SelPoint Idx: %d"), m_iPointIdx);
-	
-	//if (!m_ImgPoint.IsInBound(point.x, point.y))
-	//{
-	//	m_ImgPoint.Draw(m_ImgBoard, point.x, point.y);
-	//	DrawImgBoard();
-
-	//	// ImagePoint Pos
-	//	m_strPos00.Format(_T("Pos00: %d %d"), point.x, point.y);
-	//}
-
-	//DrawPoint(point.x, point.y);
-	//m_ImgPoint.Draw(*this, point.x, point.y);
-	
-	// Draw ImageBoard
-	DrawImgBoard();
 
 	UpdateData(FALSE);
 
@@ -458,21 +534,21 @@ void CCircleMakerDlg::OnMouseMove(UINT nFlags, CPoint point)
 {
 	if (m_bLDown && 0 <= m_iPointIdx)
 	{
-		ImagePoint* pImgPoint = m_vImgPoints[m_iPointIdx];
-		if (NULL != pImgPoint)
+		DrawingPoint* pDrawingPoint = m_vDrawingPoints[m_iPointIdx];
+		if (NULL != pDrawingPoint)
 		{
 			// Offset
 			CPoint ptOffset = point - m_ptPerMousePos;
+			pDrawingPoint->MovePos(ptOffset.x, ptOffset.y);
 
-			pImgPoint->MovePos(ptOffset.x, ptOffset.y);
-
-			// ImagePoint Pos
-			CPoint ptPoint = pImgPoint->GetPos();
+			// DrawingPoint Pos
+			CPoint ptPoint = pDrawingPoint->GetPos();
 			m_strPos[m_iPointIdx].Format(_T("Pos%02d: %d %d"), m_iPointIdx, ptPoint.x, ptPoint.y);
 
 			UpdateData(FALSE);
 		}
 
+		// Make Circle
 		Make3PointCircle();
 
 		// Draw All(Image Board, Image Point, 3Point Circle)
@@ -489,5 +565,19 @@ void CCircleMakerDlg::OnLButtonUp(UINT nFlags, CPoint point)
 	m_bLDown = false;				// Mouse LDown flag
 
 	CDialogEx::OnLButtonUp(nFlags, point);
+}
+//---------------------------------------------------------------------------------------------
+void CCircleMakerDlg::OnBnClickedBtnRand3point()
+{
+	std::thread Thread(ProcessThread, this);
+	Thread.detach();
+}
+//---------------------------------------------------------------------------------------------
+// Thread에서 MessageMap을 통해 UpdateData(FALSE)처리
+LRESULT CCircleMakerDlg::OnUpdateDataFromMessage(WPARAM wParam, LPARAM lParam)
+{
+	UpdateData(FALSE);
+
+	return 0;
 }
 //---------------------------------------------------------------------------------------------

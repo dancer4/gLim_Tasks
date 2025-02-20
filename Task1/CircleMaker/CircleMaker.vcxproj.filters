@@ -33,10 +33,10 @@
     <ClInclude Include="Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ImagePoint.h">
+    <ClInclude Include="Point3Circle.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Point3Circle.h">
+    <ClInclude Include="DrawingPoint.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -50,10 +50,10 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="ImagePoint.cpp">
+    <ClCompile Include="Point3Circle.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Point3Circle.cpp">
+    <ClCompile Include="DrawingPoint.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
