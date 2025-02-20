@@ -11,7 +11,6 @@
 using namespace std;
 
 #define UM_UPDATEDATA		(WM_USER + 1)
-#define MAX_POINT_COUNT		3
 
 // CCircleMakerDlg dialog
 class CCircleMakerDlg : public CDialogEx

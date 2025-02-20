@@ -474,17 +474,19 @@ void CCircleMakerDlg::Make3PointCircle()
 	// Check Image Point Count
 	if (MAX_POINT_COUNT > m_vDrawingPoints.size()) return;
 
-	CPoint ptPoints[MAX_POINT_COUNT];
+	vector<CPoint> vPoints;
 	for (int i = 0; i < MAX_POINT_COUNT; ++i)
 	{
 		DrawingPoint* pDrawingPoint = m_vDrawingPoints[i];
 		if (NULL == pDrawingPoint) continue;
 
-		ptPoints[i] = pDrawingPoint->GetPos();
+		CPoint ptPoint = pDrawingPoint->GetPos();
+		vPoints.push_back(ptPoint);
 	}
 
 	// Make 3 Point Circle
-	m_Pt3Circle.Make(ptPoints[0], ptPoints[1], ptPoints[2]);
+	//m_Pt3Circle.Make(ptPoints[0], ptPoints[1], ptPoints[2]);
+	m_Pt3Circle.Make(vPoints);
 }
 //---------------------------------------------------------------------------------------------
 void CCircleMakerDlg::OnDestroy()

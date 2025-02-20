@@ -26,35 +26,93 @@ void Point3Circle::Reset()
 // Make a Circle: P0, P1, P2(3점)으로 Circle 만들기
 bool Point3Circle::Make(CPoint ptP0, CPoint ptP1, CPoint ptP2)
 {
-	// P0 - P1의 중심점
-	CPoint ptCenterP0_1;
-	ptCenterP0_1.x = (ptP0.x + ptP1.x) * 0.5f;
-	ptCenterP0_1.y = (ptP0.y + ptP1.y) * 0.5f;
+	vector<CPoint> vPoints;
+	vPoints.push_back(ptP0);
+	vPoints.push_back(ptP1);
+	vPoints.push_back(ptP2);
 
-	// P1 - P2의 중심점
-	CPoint ptCenterP1_2;
-	ptCenterP1_2.x = (ptP1.x + ptP2.x) * 0.5f;
-	ptCenterP1_2.y = (ptP1.y + ptP2.y) * 0.5f;
+	return Make(vPoints);
+}
+//--------------------------------------------------------------------------------------------
+// Make a Circle: vector에 저장된 P0, P1, P2(3점)으로 Circle 만들기
+bool Point3Circle::Make(const vector<CPoint>& ptPoints)
+{
+	if (MAX_POINT_COUNT != ptPoints.size()) return false;
 
-	// Line0: P0 - P1의 수직 기울기
-	float fPerp0 = -1.0f * (ptP0.x - ptP1.x) / (ptP0.y - ptP1.y);	// Line0 기울기
-	float fDist0 = ptCenterP0_1.y - fPerp0 * ptCenterP0_1.x;		// Line0 상수
-	// Line1: P1 - P2의 수직 기울기
-	float fPerp1 = -1.0f * (ptP1.x - ptP2.x) / (ptP1.y - ptP2.y);	// Line1 기울기
-	float fDist1 = ptCenterP1_2.y - fPerp1 * ptCenterP1_2.x;		// Line1 상수
+	// 0: P0 - P1의 중심점, 1: P1 - P2의 중심점, 2: P2 - P0의 중심점
+	CPoint ptCenterLine;
+	// 수직 기울기
+	vector<float> vfPerp, vfDist;
+	for (int i = 0; i < MAX_POINT_COUNT; ++i)
+	{
+		int iP1 = i + 1;
+		if (MAX_POINT_COUNT <= iP1) iP1 = 0;
+
+		// Line Center Pos
+		ptCenterLine.x = (ptPoints[i].x + ptPoints[iP1].x) * 0.5f;
+		ptCenterLine.y = (ptPoints[i].y + ptPoints[iP1].y) * 0.5f;
+
+		// 수직 기울기
+		int iYLen = ptPoints[i].y - ptPoints[iP1].y;
+		if (0 != iYLen)
+		{
+			float fPerp = -1.0f * (float)(ptPoints[i].x - ptPoints[iP1].x) / iYLen;		// Line 기울기
+			float fDist = ptCenterLine.y - fPerp * ptCenterLine.x;						// Line 상수
+
+			vfPerp.push_back(fPerp);
+			vfDist.push_back(fDist);
+		}
+	}
 	
 	// 평행
-	if (fabs(fPerp0 - fPerp1) <= REAL_EPSILON)
+	if ((2 > vfPerp.size()) || fabs(vfPerp[0] - vfPerp[1]) <= REAL_EPSILON)
 		return false;
-
+		
 	// 원의 중심점: Line0와 Line1의 교점
-	m_ptCenter.x = (fDist1 - fDist0) / (fPerp0 - fPerp1);
-	m_ptCenter.y = fPerp0 * m_ptCenter.x + fDist0;
-
+	//m_ptCenter.x = (vfDist[1] - vfDist[0]) / (vfPerp[0] - vfPerp[1]);
+	//m_ptCenter.y = vfPerp[0] * m_ptCenter.x + vfDist[0];
+	// 원의 중심점
+	CalcuCenter(vfPerp, vfDist, m_ptCenter);
+	
 	// 반지름
-	m_iRadius = sqrt(pow((float)(ptP0.x - m_ptCenter.x), 2) + pow((float)(ptP0.y - m_ptCenter.y), 2));
-
+	m_iRadius = sqrt(pow((double)(ptPoints[0].x - m_ptCenter.x), 2) +
+		pow((double)(ptPoints[0].y - m_ptCenter.y), 2));
+	
 	return true;
+}
+//--------------------------------------------------------------------------------------------
+// Calcu Center: 수직 Line을 통한 Center 계산
+void Point3Circle::CalcuCenter(const vector<float>& vfPerp, const vector<float>& vfDist, CPoint& ptCenter)
+{
+	const int iCount = vfPerp.size();
+	if (2 > iCount) return;
+
+	vector<CPoint> vTemp;
+	CPoint ptTemp;
+	for (int i = 0; i < iCount; ++i)
+	{
+		int iP1 = i + 1;
+		if (iCount <= iP1) iP1 = 0;
+
+		ptTemp.x = (vfDist[iP1] - vfDist[i]) / (vfPerp[i] - vfPerp[iP1]);
+		ptTemp.y = vfPerp[i] * ptTemp.x + vfDist[i];
+
+		vTemp.push_back(ptTemp);
+
+		// 기본값
+		ptCenter = vTemp[i];
+
+		if (1 < vTemp.size())
+		{
+			// 두 점의 유사성 체크
+			if ((ALLOWED_OFFSET >= abs(vTemp[i].x - vTemp[i - 1].x)) &&
+				(ALLOWED_OFFSET >= abs(vTemp[i].y - vTemp[i - 1].y)))
+			{
+				ptCenter = vTemp[i - 1];
+				break;
+			}
+		}
+	}
 }
 //--------------------------------------------------------------------------------------------
 void Point3Circle::Draw(CImage& ImgBoard)
