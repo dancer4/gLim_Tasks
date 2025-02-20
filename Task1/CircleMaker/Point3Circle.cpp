@@ -68,9 +68,6 @@ bool Point3Circle::Make(const vector<CPoint>& ptPoints)
 	if ((2 > vfPerp.size()) || fabs(vfPerp[0] - vfPerp[1]) <= REAL_EPSILON)
 		return false;
 		
-	// 원의 중심점: Line0와 Line1의 교점
-	//m_ptCenter.x = (vfDist[1] - vfDist[0]) / (vfPerp[0] - vfPerp[1]);
-	//m_ptCenter.y = vfPerp[0] * m_ptCenter.x + vfDist[0];
 	// 원의 중심점
 	CalcuCenter(vfPerp, vfDist, m_ptCenter);
 	
@@ -128,14 +125,10 @@ void Point3Circle::Draw(CImage& ImgBoard)
 		int iOffsetX = m_iRadius * cosf(fRad);
 		int iOffsetY = m_iRadius * sinf(fRad);
 
-		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);
-		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);
-		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);
-		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);
-		//DrawPoint(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);	// 0 ~ 90
-		//DrawPoint(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);	// 270 ~ 360
-		//DrawPoint(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);	// 90 ~ 180
-		//DrawPoint(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);	// 180 ~ 270
+		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);		// 0 ~ 90
+		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);		// 270 ~ 360
+		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y - iOffsetY);		// 90 ~ 180
+		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y - iOffsetY);		// 180 ~ 270
 	}
 }
 //--------------------------------------------------------------------------------------------
@@ -166,7 +159,6 @@ void Point3Circle::DrawCircle(CImage& ImgBoard, int iX, int iY)
 				if (ptBoard.x <= iPos) break;
 				else if (0 <= iPos)
 				{
-					//pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;	// Black
 					DrawPoint(ImgBoard, iX, iY, m_iWidth);
 				}
 			}
@@ -201,28 +193,10 @@ void Point3Circle::DrawPoint(CImage& ImgBoard, int iX, int iY, int iWidth)
 				if (ptBoard.x <= iPos) break;
 				else if (0 <= iPos)
 				{
-					//if (IsInPoint(iX, iY, iPos, ptPos.y, iHalfWidth))
-					{
-						pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;	// Black
-					}
+					pbImgBoard[ptPos.y * iPitchBoard + iPos] = 0;	// Black
 				}
 			}
 		}
 	}
 }
-//--------------------------------------------------------------------------------------------
-//// Check in Point
-//bool Point3Circle::IsInPoint(int iPtPosX, int iPtPosY, int iX, int iY, int iRadius)
-//{
-//	bool bRet = false;
-//
-//	// 반지름과 길이의 제곱값
-//	float fSquareRadius = pow((float)iRadius, 2);
-//	float fSquareLength = pow((float)(iPtPosX - iX), 2) + pow((float)(iPtPosY - iY), 2);
-//	
-//	// 제곱값 비교(반지름, 길이)
-//	if (fSquareRadius >= fSquareLength) bRet = true;
-//
-//	return bRet;
-//}
 //--------------------------------------------------------------------------------------------
