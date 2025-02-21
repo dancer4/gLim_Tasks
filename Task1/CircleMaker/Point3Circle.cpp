@@ -86,6 +86,9 @@ void Point3Circle::CalcuCenter(const vector<float>& vfPerp, const vector<float>&
 
 	vector<CPoint> vTemp;
 	CPoint ptTemp;
+	// 보정을 위한 Check 값
+	int iXOffset = INT_MAX;
+	int iYOffset = INT_MAX;
 	for (int i = 0; i < iCount; ++i)
 	{
 		int iP1 = i + 1;
@@ -96,17 +99,23 @@ void Point3Circle::CalcuCenter(const vector<float>& vfPerp, const vector<float>&
 
 		vTemp.push_back(ptTemp);
 
-		// 기본값
-		ptCenter = vTemp[i];
-
 		if (1 < vTemp.size())
 		{
-			// 두 점의 유사성 체크
-			if ((ALLOWED_OFFSET >= abs(vTemp[i].x - vTemp[i - 1].x)) &&
-				(ALLOWED_OFFSET >= abs(vTemp[i].y - vTemp[i - 1].y)))
+			// 계산결과가 유사한 값 적용
+			// X 값
+			int iOffset = abs(vTemp[i].x - vTemp[i - 1].x);
+			if (iXOffset > iOffset)
 			{
-				ptCenter = vTemp[i - 1];
-				break;
+				ptCenter.x = vTemp[i - 1].x;
+				iXOffset = iOffset;
+			}
+
+			// Y 값
+			iOffset = abs(vTemp[i].y - vTemp[i - 1].y);
+			if (iYOffset > iOffset)
+			{
+				ptCenter.y = vTemp[i - 1].y;
+				iYOffset = iOffset;
 			}
 		}
 	}
@@ -122,8 +131,8 @@ void Point3Circle::Draw(CImage& ImgBoard)
 		// Degree -> Radian
 		float fRad = DEG2RAD(fDeg);
 
-		int iOffsetX = m_iRadius * cosf(fRad);
-		int iOffsetY = m_iRadius * sinf(fRad);
+		int iOffsetX = m_iRadius * sinf(fRad);
+		int iOffsetY = m_iRadius * cosf(fRad); 
 
 		DrawCircle(ImgBoard, m_ptCenter.x + iOffsetX, m_ptCenter.y + iOffsetY);		// 0 ~ 90
 		DrawCircle(ImgBoard, m_ptCenter.x - iOffsetX, m_ptCenter.y + iOffsetY);		// 270 ~ 360

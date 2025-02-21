@@ -5,7 +5,6 @@
 using namespace std;
 
 #define MAX_POINT_COUNT		3
-#define ALLOWED_OFFSET		1
 
 //--------------------------------------------------------------------------------------------
 // class Point3Circle
@@ -39,7 +38,7 @@ private:
 	
 	// Calcu Center: 수직 Line을 통한 Center 계산
 	void	CalcuCenter(const vector<float>& vfPerp, const vector<float>& vfDist, CPoint& ptCenter);
-	
+		
 private:
 	CPoint		m_ptCenter;		// 중심점
 	int			m_iRadius;		// 반지름
